@@ -1,5 +1,5 @@
 const {connection} = require('../db/connect');
-const asyncWrapper = require('../middleware/async');
+const {asyncWrapper} = require('../middleware/async');
 const {createCustomError} = require('./../errors/custom-error');
 
 // function createError(err, res, status) {
@@ -11,12 +11,12 @@ const {createCustomError} = require('./../errors/custom-error');
 //   });
 // }
 
-const getAllTasks = asyncWrapper(async (req, res) => {
+const getAllTasks = asyncWrapper(async (req, res, next) => {
   const tasks = await connection.query('SELECT * FROM tasks');
   res.status(200).json({status: 'success', amount: tasks.rows.length, tasks: tasks.rows});
 });
 
-const createTask = asyncWrapper(async (req, res) => {
+const createTask = asyncWrapper(async (req, res, next) => {
   const {name} = req.body;
   if (!name) {
     return next(createCustomError('Name is required', 400));
@@ -37,7 +37,7 @@ const createTask = asyncWrapper(async (req, res) => {
   }
 });
 
-const getTask = asyncWrapper(async (req, res) => {
+const getTask = asyncWrapper(async (req, res, next) => {
   const {id} = req.params;
   const task = await connection.query('SELECT * FROM tasks where id = $1', [id]);
   if (!task.rows[0]) {
@@ -47,7 +47,7 @@ const getTask = asyncWrapper(async (req, res) => {
   }
 });
 
-const updateTask = asyncWrapper(async (req, res) => {
+const updateTask = asyncWrapper(async (req, res, next) => {
   const {id} = req.params;
   const incomingTask = await connection.query('SELECT * FROM tasks where id = $1', [id]);
   if (!incomingTask.rows[0]) {
@@ -83,7 +83,7 @@ const updateTask = asyncWrapper(async (req, res) => {
   }
 });
 
-const deleteTask = asyncWrapper(async (req, res) => {
+const deleteTask = asyncWrapper(async (req, res, next) => {
   const {id} = req.params;
   const deleteTask = await connection.query('DELETE FROM tasks WHERE id = $1 RETURNING *', [
     id,
