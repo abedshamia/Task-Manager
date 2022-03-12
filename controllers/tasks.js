@@ -1,9 +1,15 @@
 const {connection} = require('../db/connect');
 const asyncWrapper = require('../middleware/async');
+const {createCustomError} = require('./../errors/custom-error');
 
-function createError(err, res, status) {
-  return res.status(status).json(err);
-}
+// function createError(err, res, status) {
+//   const error = new Error(err);
+//   error.status = status;
+//   res.status(status).json({
+//     status: 'error',
+//     message: error.message,
+//   });
+// }
 
 const getAllTasks = asyncWrapper(async (req, res) => {
   const tasks = await connection.query('SELECT * FROM tasks');
@@ -13,9 +19,7 @@ const getAllTasks = asyncWrapper(async (req, res) => {
 const createTask = asyncWrapper(async (req, res) => {
   const {name} = req.body;
   if (!name) {
-    return res
-      .status(400)
-      .json({status: 'error', message: 'Please provide all required fields'});
+    return next(createCustomError('Name is required', 400));
   }
 
   const newTask = await connection.query('INSERT INTO tasks (name) VALUES ($1) RETURNING *', [
@@ -29,7 +33,7 @@ const createTask = asyncWrapper(async (req, res) => {
       task: newTask.rows[0],
     });
   } else {
-    createError(error, res, 500);
+    return next(createCustomError('Task not created', 400));
   }
 });
 
@@ -37,7 +41,7 @@ const getTask = asyncWrapper(async (req, res) => {
   const {id} = req.params;
   const task = await connection.query('SELECT * FROM tasks where id = $1', [id]);
   if (!task.rows[0]) {
-    return res.status(404).json({status: 'error', message: 'Task not found'});
+    return next(createCustomError('Task not found', 404));
   } else {
     res.status(200).json({status: 'success', task: task.rows[0]});
   }
@@ -47,14 +51,14 @@ const updateTask = asyncWrapper(async (req, res) => {
   const {id} = req.params;
   const incomingTask = await connection.query('SELECT * FROM tasks where id = $1', [id]);
   if (!incomingTask.rows[0]) {
-    return res.status(404).json({status: 'error', message: 'Task not found'});
+    return next(createCustomError('Task not found', 404));
   }
 
   const {name, completed, description} = incomingTask.rows[0];
   const {name: newName, completed: newCompleted, description: newDescription} = req.body;
 
-  if (!newName && !newCompleted && !newDescription) {
-    return res.status(400).json({status: 'error', message: 'Please provide a field'});
+  if (!newName && !newCompleted) {
+    return next(createCustomError('Name or completed is required', 400));
   }
 
   const updatedTask = {
@@ -75,7 +79,7 @@ const updateTask = asyncWrapper(async (req, res) => {
       task: updateTask.rows[0],
     });
   } else {
-    createError(error, res, 500);
+    return next(createCustomError('Task not updated', 400));
   }
 });
 
@@ -85,7 +89,7 @@ const deleteTask = asyncWrapper(async (req, res) => {
     id,
   ]);
   if (!deleteTask.rows[0]) {
-    return res.status(404).json({status: 'error', message: 'Task not found'});
+    next(createCustomError('Task not found', 404));
   } else {
     res.status(200).json({status: 'success', message: 'Task deleted successfully'});
   }
