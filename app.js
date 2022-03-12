@@ -4,7 +4,6 @@ const app = express();
 const tasks = require('./routes/tasks');
 const {connection} = require('./db/connect');
 const PORT = process.env.PORT || 3000;
-
 //Routes
 app.use(express.json());
 
